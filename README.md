@@ -90,6 +90,16 @@ python -I app.py
 
 产物为 `dist\WorkBuddyManager.exe`（约 51 MB），单文件、免安装 Python，双击即用；数据（`data\`）生成在 exe 旁边，删除 exe 即完全卸载。exe 兼任后台 worker：`WorkBuddyManager.exe --mode daily|poll`；在 exe 模式下“保存并应用”注册的计划任务直接指向该 exe。打开窗口只读本机记录，不自动联网；设置 `WB_DEBUG=1` 运行 worker 时会把异常类型追加到 `data\debug-traceback.log`（不含令牌与消息内容）。
 
+## macOS
+
+同一套代码在 macOS 11+ 以 launchd 运行同样的两个自动化任务，界面与策略页语义与 Windows 一致。
+
+- **数据目录**：`~/Library/Application Support/WorkBuddyManager/`（`.app` 包保持只读，`data/`、`backups/` 都在这里）。
+- **自动化**：「保存并应用」写入 `~/Library/LaunchAgents/com.wawavd13.workbuddy-manager.signin.plist` 与 `.poll.plist` 并 `launchctl bootstrap`；「暂停自动任务」对应 `bootout` + `disable`；「恢复原任务」移除这两个 plist，若发现上游安装的 `workbuddy-auto-signin.plist` 会重新加载它。所有写操作前先事务备份到 `backups/`。
+- **显示差异**：launchd 不提供上次运行时间，面板该列显示 `—`；下次运行由触发时间表推算；任务是否被 launchd 加载、上次退出码来自 `launchctl print`。
+- **从源码运行**：`python3 -I -m pip install PySide6` 后 `python3 -I app.py`。legacy tkinter 回退界面不随 macOS 包发布。
+- **构建**：推送 `v*` 标签时 GitHub Actions 自动在 macOS runner 上跑全部测试并构建 `WorkBuddyManager.app`（未签名，首次打开需右键 → 打开，或在系统设置里允许）；本地构建执行 `python -m PyInstaller --noconfirm WorkBuddyManager-macos.spec`。
+
 
 ## 隐私与数据
 

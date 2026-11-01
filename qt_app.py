@@ -922,6 +922,12 @@ class Manager(QMainWindow):
         for i, (chip, next_run, last_run) in enumerate(self.task_rows):
             t = self.tasks[i] if len(self.tasks) > i else {}
             chip.setToolTip("")
+            if t.get("state") == "missing":
+                set_chip(chip, "未创建", "pink")
+                chip.setToolTip(str(t.get("error") or "任务不存在。"))
+                next_run.setText("—")
+                last_run.setText("—")
+                continue
             if t.get("error"):
                 set_chip(chip, "查询失败", "pink")
                 chip.setToolTip(str(t["error"]))

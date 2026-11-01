@@ -13,7 +13,11 @@ def main():
         return work()
     if "--legacy" in sys.argv:
         sys.argv.remove("--legacy")
-        from legacy_tk_app import main as launch
+        try:
+            from legacy_tk_app import main as launch
+        except ImportError:
+            print("legacy UI is not bundled in this build", file=sys.stderr)
+            return 2
     else:
         from qt_app import main as launch
     return launch()

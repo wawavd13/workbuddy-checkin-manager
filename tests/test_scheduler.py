@@ -10,6 +10,10 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 PATH = Path(__file__).resolve().parents[1] / "scheduler.py"
+
+if sys.platform == "darwin":
+    print("skipped: Windows Task Scheduler bridge")
+    raise SystemExit(0)
 sys.path.insert(0, str(PATH.parent))
 SPEC = importlib.util.spec_from_file_location("scheduler_under_test", PATH)
 scheduler = importlib.util.module_from_spec(SPEC)

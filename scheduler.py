@@ -113,6 +113,9 @@ def worker_definition():
     """Scheduled-task worker handed to scheduler.ps1; the frozen exe is its own worker."""
     if storage.FROZEN:
         return {"program": sys.executable, "arguments": {"daily": "--mode daily", "poll": "--mode poll"}}
+    if sys.platform == "darwin":
+        return {"program": sys.executable,
+                "arguments": {mode: f'-I "{RUNNER}" --mode {mode}' for mode in ("daily", "poll")}}
     return {"program": PYTHONW,
             "arguments": {mode: f'-I "{RUNNER}" --mode {mode}' for mode in ("daily", "poll")}}
 
@@ -179,24 +182,44 @@ def query_tasks() -> list[dict]:
              "error": error} for name in TASK_NAMES]
 
 
+def _mac_backend():
+    """The launchd backend on macOS, or None for the Windows Task Scheduler bridge."""
+    if sys.platform == "darwin":
+        import scheduler_mac
+        return scheduler_mac
+    return None
+
+
 def apply_config(config) -> dict:
     try:
         validated = normalize_config(config)
     except (ValueError, TypeError) as exc:
         return _failure(exc)
+    backend = _mac_backend()
+    if backend:
+        return backend.apply_config(validated, _build_times(validated), worker_definition())
     return _call("apply", config=validated, times=_build_times(validated))
 
 
 def set_enabled(enabled: bool) -> dict:
     if type(enabled) is not bool:
         return _failure("enabled must be bool")
+    backend = _mac_backend()
+    if backend:
+        return backend.set_enabled(enabled, worker_definition())
     return _call("enable", enabled=enabled)
 
 
 def restore_original() -> dict:
+    backend = _mac_backend()
+    if backend:
+        return backend.restore_original(worker_definition())
     return _call("restore")
 
 
 def backup_exists() -> bool:
+    backend = _mac_backend()
+    if backend:
+        return backend.backup_exists()
     result = _call("backup_exists")
     return result.get("ok") is True and result.get("exists") is True

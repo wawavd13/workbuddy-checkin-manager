@@ -1,0 +1,50 @@
+name: build-macos
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install PySide6==6.12.0 pyinstaller
+
+      - name: Run test suite
+        run: |
+          set -e
+          for f in tests/test_backend.py tests/test_credits.py tests/test_qt_ui.py \
+                   tests/test_record_view.py tests/test_scheduler.py tests/test_scheduler_mac.py \
+                   tests/test_ui.py tests/test_usage_reader.py; do
+            echo "== $f"
+            python "$f"
+          done
+
+      - name: Build .app bundle
+        run: python -m PyInstaller --noconfirm --clean WorkBuddyManager-macos.spec
+
+      - name: Verify bundle layout
+        run: |
+          test -x dist/WorkBuddyManager.app/Contents/MacOS/WorkBuddyManager
+          test -f dist/WorkBuddyManager.app/Contents/Info.plist
+          test -f dist/WorkBuddyManager.app/Contents/Resources/vendor/auth_backend.py
+
+      - name: Package zip
+        run: cd dist && zip -qry WorkBuddyManager-macos.zip WorkBuddyManager.app && shasum -a 256 WorkBuddyManager-macos.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkBuddyManager-macos
+          path: dist/WorkBuddyManager-macos.zip
+          if-no-files-found: error

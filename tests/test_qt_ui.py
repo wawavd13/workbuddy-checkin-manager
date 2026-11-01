@@ -298,6 +298,14 @@ class QtInterfaceTests(unittest.TestCase):
         self.assertEqual(self.window.credits_value.text(), "—")
         self.assertIn("网络失败", self.window.credits_hint.text())
 
+    def test_task_chips_distinguish_missing_from_failed(self):
+        self.window.tasks = [{"state": "missing", "error": "任务不存在。"},
+                             {"state": "unknown", "error": "PowerShell did not return valid JSON"}]
+        self.window.render_tasks()
+        self.assertEqual(self.window.task_rows[0][0].text(), "未创建")
+        self.assertEqual(self.window.task_rows[1][0].text(), "查询失败")
+        self.assertIn("任务不存在", self.window.task_rows[0][0].toolTip())
+
     def test_credits_failure_keeps_last_success_marked(self):
         value = {"ok": False, "error": "网络失败", "queried_at": "2026-11-01T03:05:02+08:00",
                  "last_ok_at": "2026-11-01T02:05:06+08:00", "remaining": 5906, "total": 5906, "used": 0,

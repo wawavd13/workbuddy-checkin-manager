@@ -10,9 +10,16 @@ import re
 import sys
 import tempfile
 
-# Frozen exe: writable data lives beside the program, bundled read-only resources in _MEIPASS.
+# Frozen exe: writable data lives beside the program on Windows and in
+# ~/Library/Application Support on macOS (a .app bundle must stay read-only),
+# bundled read-only resources in _MEIPASS.
 FROZEN = bool(getattr(sys, "frozen", False))
-BASE_DIR = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parent
+if FROZEN and sys.platform == "darwin":
+    BASE_DIR = Path.home() / "Library" / "Application Support" / "WorkBuddyManager"
+elif FROZEN:
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
 DEFAULT_CONFIG = {
     "signin_times": ["00:05"],

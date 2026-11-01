@@ -1,0 +1,28 @@
+{
+  "signin_times": [
+    "00:05"
+  ],
+  "growth_times": [
+    "01:00",
+    "05:00",
+    "09:00",
+    "13:00",
+    "17:00",
+    "21:00"
+  ],
+  "retry_enabled": true,
+  "retry_interval_minutes": 60,
+  "retry_max_per_day": 7,
+  "stop_after_success": true,
+  "catch_up": true,
+  "allow_battery": true,
+  "growth": {
+    "enabled": true,
+    "tasks": true,
+    "travel": true,
+    "makeup": false,
+    "redeem": false,
+    "lottery": false,
+    "blindbox": false
+  }
+}

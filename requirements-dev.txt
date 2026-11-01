@@ -1,0 +1,4 @@
+# 开发 / 打包 / 可视化验证脚本
+-r requirements.txt
+pyinstaller==6.22.3
+Pillow==12.2.0

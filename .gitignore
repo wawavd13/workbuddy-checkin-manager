@@ -1,0 +1,31 @@
+# ---- 运行时数据：含账号缓存、签到记录、任务备份，绝不提交 ----
+data/
+backups/
+runner.lock
+runtime.json
+cancel.request
+*.log
+
+# ---- 构建产物 ----
+build/
+dist/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- 可视化验证输出（截图可能包含真实账号数据） ----
+verification/ui-review-*/
+verification/dark-states/
+verification/**/*.png
+verification/**/results.json
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -127,7 +127,23 @@ def run_worker(mode, engine_factory=Engine):
     return code, record
 
 
+def _utf8_streams():
+    '''Pin stdout/stderr to UTF-8.
+
+    The UI decodes worker output as UTF-8, but a worker spawned on Chinese Windows otherwise
+    writes the system code page (GBK): the growth report then arrived as mojibake.'''
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
+
+
 def main(argv=None):
+    _utf8_streams()
     parser = argparse.ArgumentParser(description="WorkBuddy 签到管理独立后台")
     parser.add_argument("--mode", choices=("status", "checkin", "growth", "daily", "poll"), required=True)
     args = parser.parse_args(argv)

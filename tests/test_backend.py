@@ -7,6 +7,7 @@ import copy
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -297,6 +298,20 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(record["result"], "CLAIMED")
         self.assertFalse(record["credits_refreshed"])
+
+    def test_worker_output_is_utf8_regardless_of_console_code_page(self):
+        # The UI decodes worker stdout as UTF-8; on Chinese Windows a child Python otherwise
+        # writes the ANSI code page (GBK), which rendered the growth report as mojibake.
+        snippet = ("import json,sys;sys.path.insert(0,sys.argv[1]);import runner;runner._utf8_streams();"
+                   "print(json.dumps({'report':'成长中心无可领取项'},ensure_ascii=False),flush=True);"
+                   "sys.stderr.write('错误\\n')")
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("PYTHONIOENCODING", "PYTHONUTF8", "PYTHONLEGACYWINDOWSSTDIO")}
+        child = subprocess.run([sys.executable, "-I", "-c", snippet, str(ROOT)], cwd=tempfile.gettempdir(),
+                               capture_output=True, env=env)
+        self.assertEqual(child.returncode, 0, child.stderr)
+        self.assertEqual(json.loads(child.stdout.decode("utf-8"))["report"], "成长中心无可领取项")
+        self.assertEqual(child.stderr.decode("utf-8").strip(), "错误")
 
     def test_worker_skipped_patrol_with_growth_slot_does_not_query_credits(self):
         class Patrol:

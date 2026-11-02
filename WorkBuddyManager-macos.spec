@@ -44,8 +44,8 @@ app = BUNDLE(
     info_plist={
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '11.0',
-        'CFBundleShortVersionString': '1.1.0',
-        'CFBundleVersion': '1.1.0',
+        'CFBundleShortVersionString': '1.1.1',
+        'CFBundleVersion': '1.1.1',
         'NSHumanReadableCopyright': 'MIT License',
     },
 )

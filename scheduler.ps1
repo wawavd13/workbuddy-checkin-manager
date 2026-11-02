@@ -46,7 +46,14 @@ function Read-Task([string]$Name) {
     try { $tasks = @(Get-ScheduledTask -TaskName $Name -TaskPath '\' -ErrorAction Stop) }
     catch {
         # Only explicit not-found is absence; permission/provider errors remain errors.
-        if ($_.FullyQualifiedErrorId -like '*NoMatching*' -or
+        # Windows PowerShell 5.1 reports a missing task as a CimJobException whose
+        # FullyQualifiedErrorId is 'CmdletizationQuery_NotFound[,TaskName],Get-ScheduledTask',
+        # category ObjectNotFound, HResult 0x80131501; its message is localized, so never match on it.
+        $errorId = [string]$_.FullyQualifiedErrorId
+        if ($_.CategoryInfo.Category -eq [Management.Automation.ErrorCategory]::ObjectNotFound -or
+            $errorId -like 'CmdletizationQuery_NotFound*' -or
+            $errorId -like '*NoMatching*' -or
+            $errorId -like 'HRESULT 0x80070002,*' -or
             $_.Exception.HResult -eq -2147024894 -or
             $_.Exception.HResult -eq -2147216625) { return $null }
         throw

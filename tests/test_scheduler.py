@@ -235,6 +235,28 @@ switch ($env:TEST_SCENARIO) {
         $result=Invoke-Transaction $req; Assert $result.ok 'apply success'; Assert (-not $script:Db[$Names[0]].Settings.Enabled) 'disabled not preserved'
         Assert ($script:Db[$Names[1]].Actions[0].Arguments -match '--mode poll$') 'poll args'
     }
+    'fresh_machine' {
+        # A missing task makes the real Get-ScheduledTask raise (localized message, category
+        # ObjectNotFound) rather than return nothing; the mock reproduces that shape.
+        function Get-ScheduledTask($TaskName,$TaskPath,$ErrorAction) {
+            if ($script:Db.ContainsKey($TaskName)) { return $script:Db[$TaskName] }
+            Write-Error -Message ('CIM query for ' + $TaskName + ' found no MSFT_ScheduledTask objects.') -ErrorId 'CmdletizationQuery_NotFound,Get-ScheduledTask' -Category ObjectNotFound
+        }
+        $script:Db.Clear()
+        Assert ($null -eq (Read-Task $Names[0])) 'missing task must read as absent'
+        $rows=Query-Tasks; Assert ($rows[0].state -eq 'missing' -and $rows[1].state -eq 'missing') 'fresh query states'
+        Assert ($script:Writes -eq 0) 'fresh query wrote'
+        $Runner=$env:TEST_SCHEDULER_PS
+        $req=[pscustomobject]@{operation='apply';config=[pscustomobject]@{catch_up=$true;allow_battery=$true};
+            times=[pscustomobject]@{WorkBuddyAutoSignin=@('00:05');WorkBuddyGrowthPoll=@('01:00')}}
+        $result=Invoke-Transaction $req; Assert $result.ok ('fresh apply: '+($result | ConvertTo-Json -Depth 10 -Compress))
+        Assert ($script:Db.ContainsKey($Names[0]) -and $script:Db.ContainsKey($Names[1])) 'fresh apply created tasks'
+        $rows=Query-Tasks; Assert ($rows[0].managed -and $rows[1].managed) 'fresh tasks managed'
+        Assert (Test-Path (Join-Path $Original 'manifest.json')) 'original snapshot written'
+        Assert (@(Get-ChildItem $Original -Filter '*.xml').Count -eq 0) 'absent tasks must not be exported'
+        function Get-ScheduledTask($TaskName,$TaskPath,$ErrorAction) { Write-Error -Message 'Access is denied.' -ErrorId 'HRESULT 0x80070005,Get-ScheduledTask' -Category PermissionDenied }
+        try { Read-Task $Names[0]; throw 'sentinel-not-raised' } catch { Assert ($_.Exception.Message -match 'Access is denied') 'permission error must stay an error' }
+    }
 }
 [Console]::WriteLine('{"ok":true}')
 '''
@@ -245,7 +267,7 @@ class PowerShellMockTests(unittest.TestCase):
     def test_bom_and_mock_operations(self):
         ps = PATH.with_suffix(".ps1")
         self.assertTrue(ps.read_bytes().startswith(b"\xef\xbb\xbf"))
-        for scenario in ("query", "guards", "enable_restore", "rollback", "apply", "apply_exe"):
+        for scenario in ("query", "guards", "enable_restore", "rollback", "apply", "apply_exe", "fresh_machine"):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as root:
                 env = dict(os.environ, TEST_SCHEDULER_PS=str(ps), TEST_SCHEDULER_ROOT=root, TEST_SCENARIO=scenario)
                 result = subprocess.run([scheduler.POWERSHELL, "-NoProfile", "-NonInteractive", "-Command", HARNESS],
